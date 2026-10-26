@@ -1,0 +1,13 @@
+<section class="slide inverted {{pageClass}}">
+  <div class="space-top"></div>
+  {{#if kicker}}<p class="kicker">{{kicker}}</p>{{/if}}
+  <div class="accent-bar"></div>
+  <h1 class="title {{titleSize}}">{{title}}</h1>
+  {{#if subtitle}}<p class="subtitle">{{subtitle}}</p>{{/if}}
+  <div class="grow"></div>
+  <div class="footer">
+    {{#if logo}}<img class="logo" src="{{logo}}" alt="{{product}}">{{/if}}
+    {{#unless logo}}<span class="brand-name">{{product}}</span>{{/unless}}
+    {{#if swipeLabel}}<span class="swipe">{{swipeLabel}}</span>{{/if}}
+  </div>
+</section>

@@ -1,0 +1,23 @@
+<section class="slide {{pageClass}}">
+  <div class="space-top"></div>
+  {{#if kicker}}<p class="kicker">{{kicker}}</p>{{/if}}
+  <h2 class="title xsmall">{{title}}</h2>
+  {{#if image}}
+  <div class="frame {{frame}}">
+    {{#if isBrowser}}
+    <div class="bar"><i></i><i></i><i></i><span class="url">{{website}}</span></div>
+    {{/if}}
+    <img src="{{image}}" alt="{{caption}}">
+  </div>
+  {{/if}}
+  {{#unless image}}
+  <p class="body">{{fallbackBody}}</p>
+  {{/unless}}
+  {{#if caption}}<p class="caption">{{caption}}</p>{{/if}}
+  <div class="grow"></div>
+  <div class="footer">
+    {{#if logo}}<img class="logo" src="{{logo}}" alt="{{product}}">{{/if}}
+    {{#unless logo}}<span class="brand-name">{{product}}</span>{{/unless}}
+    {{#if showPage}}<span class="page">{{page}}/{{total}}</span>{{/if}}
+  </div>
+</section>

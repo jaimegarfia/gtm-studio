@@ -1,0 +1,19 @@
+<section class="slide {{pageClass}}">
+  <div class="space-top"></div>
+  {{#if number}}<p class="number">{{number}}</p>{{/if}}
+  {{#if kicker}}<p class="kicker">{{kicker}}</p>{{/if}}
+  <h2 class="title {{titleSize}}">{{title}}</h2>
+  {{#if body}}<p class="body">{{body}}</p>{{/if}}
+  {{#if bullets}}
+  <ul class="bullets">
+    {{#each bullets}}<li>{{.}}</li>{{/each}}
+  </ul>
+  {{/if}}
+  {{#if quote}}<p class="quote">{{quote}}</p>{{/if}}
+  <div class="grow"></div>
+  <div class="footer">
+    {{#if logo}}<img class="logo" src="{{logo}}" alt="{{product}}">{{/if}}
+    {{#unless logo}}<span class="brand-name">{{product}}</span>{{/unless}}
+    <span class="page">{{page}}/{{total}}</span>
+  </div>
+</section>

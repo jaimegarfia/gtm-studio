@@ -1,0 +1,15 @@
+<section class="slide inverted {{pageClass}}">
+  <div class="space-top"></div>
+  {{#if kicker}}<p class="kicker">{{kicker}}</p>{{/if}}
+  <div class="accent-bar"></div>
+  <h2 class="title {{titleSize}}">{{title}}</h2>
+  {{#if body}}<p class="body">{{body}}</p>{{/if}}
+  {{#if url}}<p class="cta-url">{{url}}</p>{{/if}}
+  {{#if button}}<span class="pill">{{button}}</span>{{/if}}
+  <div class="grow"></div>
+  <div class="footer">
+    {{#if logo}}<img class="logo" src="{{logo}}" alt="{{product}}">{{/if}}
+    {{#unless logo}}<span class="brand-name">{{product}}</span>{{/unless}}
+    <span class="page">{{page}}/{{total}}</span>
+  </div>
+</section>

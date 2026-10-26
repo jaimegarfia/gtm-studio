@@ -116,6 +116,44 @@ export function tokensToCssVars(tokens) {
 }
 
 /**
+ * Picks white or near-black text for a given background color.
+ * Understands #rgb, #rrggbb, #rrggbbaa, rgb()/rgba() and hsl()/hsla(); anything
+ * else (oklch, named colors…) gets white, which suits most brand primaries.
+ * @param {string} color
+ * @returns {string}
+ */
+export function contrastColor(color) {
+  const rgb = parseColor(color);
+  if (!rgb) return '#ffffff';
+  const [r, g, b] = rgb.map((c) => {
+    const v = c / 255;
+    return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+  });
+  const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  return luminance > 0.45 ? '#111111' : '#ffffff';
+}
+
+function parseColor(color) {
+  const value = String(color || '').trim();
+  let m = value.match(/^#([0-9a-f]{3,4})$/i);
+  if (m) return [...m[1].slice(0, 3)].map((h) => parseInt(h + h, 16));
+  m = value.match(/^#([0-9a-f]{6})(?:[0-9a-f]{2})?$/i);
+  if (m) return [0, 2, 4].map((i) => parseInt(m[1].slice(i, i + 2), 16));
+  m = value.match(/^rgba?\(\s*([\d.]+)[\s,]+([\d.]+)[\s,]+([\d.]+)/i);
+  if (m) return [m[1], m[2], m[3]].map(Number);
+  m = value.match(/^hsla?\(\s*([\d.]+)(?:deg)?[\s,]+([\d.]+)%[\s,]+([\d.]+)%/i);
+  if (m) return hslToRgb(Number(m[1]), Number(m[2]) / 100, Number(m[3]) / 100);
+  return null;
+}
+
+function hslToRgb(h, s, l) {
+  const k = (n) => (n + h / 30) % 12;
+  const a = s * Math.min(l, 1 - l);
+  const f = (n) => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+  return [f(0), f(8), f(4)].map((v) => Math.round(v * 255));
+}
+
+/**
  * Reads brand.md from disk.
  * @param {string} brandPath
  * @returns {Promise<{ tokens: BrandTokens, markdown: string }>}

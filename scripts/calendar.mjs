@@ -71,7 +71,8 @@ export async function initCalendar({ marketing, network, slots, startDate, today
   } else {
     start = nextMonday(today || todayIso());
   }
-  const calendar = buildCalendar({ network, slots, startDate: start });
+  const { tokens } = await readBrand(join(marketing, 'brand.md'));
+  const calendar = buildCalendar({ network, slots, startDate: start, timezone: tokens.timezone });
   await writeCalendarFiles(marketing, calendar, network);
   return {
     startDate: start,

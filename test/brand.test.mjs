@@ -51,6 +51,16 @@ test('parseBrandTokens fills defaults for missing colors and logo fields', () =>
   assert.equal(tokens.logo.markPath, null);
 });
 
+test('linkPlacement defaults to first-comment and timezone to null', () => {
+  const tokens = parseBrandTokens(sample);
+  assert.equal(tokens.linkPlacement, 'first-comment');
+  assert.equal(tokens.timezone, null);
+  const body = normalizeTokens({ product: 'X', language: 'es', linkPlacement: 'body', timezone: 'America/Bogota' });
+  assert.equal(body.linkPlacement, 'body');
+  assert.equal(body.timezone, 'America/Bogota');
+  assert.equal(normalizeTokens({ product: 'X', language: 'es', linkPlacement: 'anywhere' }).linkPlacement, 'first-comment');
+});
+
 test('parseBrandTokens throws a clear error when the marker is missing', () => {
   assert.throws(() => parseBrandTokens('# Brand\n\nNo tokens here.'), (err) => {
     assert.ok(err instanceof BrandTokensError);

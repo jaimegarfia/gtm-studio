@@ -1,9 +1,9 @@
 ---
 name: plan
-description: Build a 4-week LinkedIn content calendar (3 posts per week) from marketing/brand.md and save it as marketing/calendar.md and marketing/calendar.json.
+description: Build a 4-week LinkedIn content calendar (3 posts per week) from marketing/brand.md and save it as marketing/calendar.md, marketing/calendar.json and marketing/calendar.html.
 disable-model-invocation: true
 argument-hint: "[YYYY-MM-DD]"
-allowed-tools: Bash(node *)
+allowed-tools: Bash(node *) PowerShell(node *)
 ---
 
 # /gtm-studio:plan
@@ -13,6 +13,8 @@ You are planning four weeks of LinkedIn content for the product described in `ma
 Optional argument: the start date (`$ARGUMENTS`, format `YYYY-MM-DD`). The calendar always starts on a Monday; a later weekday is moved forward to the next Monday. Without an argument it starts next Monday.
 
 Network for this version: LinkedIn. Its spec is `${CLAUDE_PLUGIN_ROOT}/networks/linkedin/network.json` and its playbook is `${CLAUDE_PLUGIN_ROOT}/networks/linkedin/playbook.md`.
+
+Language of this conversation: the language the user has been using; if the only input is the command itself, the content language from brand.md. Do not read the plugin's scripts or templates; run the scripts and use their output.
 
 ## 1. Check prerequisites
 
@@ -29,7 +31,7 @@ node "${CLAUDE_PLUGIN_ROOT}/scripts/doctor.mjs" --project-root "${CLAUDE_PROJECT
 
 Read all of these, fully:
 
-1. `marketing/brand.md`: audience, problem, proof points, goal, tone, forbidden words, content language.
+1. `marketing/brand.md`: audience, problem, proof points, capturable screens, goal, tone, forbidden words, content language, time zone.
 2. `${CLAUDE_PLUGIN_ROOT}/networks/linkedin/network.json`: cadence, formats, goals and the recommended `mix`.
 3. `${CLAUDE_PLUGIN_ROOT}/networks/linkedin/playbook.md`: how to plan for this network.
 
@@ -47,9 +49,11 @@ Write exactly `weeks x postsPerWeek` slots (12 for LinkedIn) as a JSON array. Ea
 - `angle`: a one-line brief for the writer, in the content language: the hook idea, the proof point from brand.md to use, and the ask (if any). The writer must be able to work from the angle alone.
 - `slug`: kebab-case, ASCII, unique, 3 to 6 words.
 
-Planning rules (from the playbook): week 1 opens with the problem and introduces the product once; week 4 ends with the strongest proof and a clear ask; no two carousels on consecutive days; at most one `cta` per week and never on a Tuesday of week 1; every topic rests on a proof point in brand.md; `screenshot` posts name the screen to capture in the angle (route or screen name).
+Screens. A `screenshot` post, or a carousel that wants a product slide, names in its angle one capturable screen from brand.md section 5, as `capture: <route>` or `capture: <route> @ <css selector>` (for example `capture: / @ #how-it-works`). Only public routes that render without logging in, uploading anything or clicking through a flow. If the only screen that fits the idea needs that, write `manual capture: <what to show>` instead, and the writer will put instructions in the checklist; never promise a screen the capture script cannot take on its own.
 
-Before writing the file, check the array yourself: 12 entries, unique week/slot pairs, unique slugs, counts close to the mix.
+Planning rules (from the playbook): week 1 opens with the problem and introduces the product once; week 4 ends with the strongest proof and a clear ask; no two carousels on consecutive days; at most one `cta` per week and never on a Tuesday of week 1; every topic rests on a proof point in brand.md; spread the examples and personas in brand.md so the same one does not carry two posts in a row.
+
+Before writing the file, check the array yourself: 12 entries, unique week/slot pairs, unique slugs, counts close to the mix, every `capture:` pointing at a capturable screen.
 
 ## 4. Write the slots and build the calendar
 
@@ -74,5 +78,6 @@ node "${CLAUDE_PLUGIN_ROOT}/scripts/build-calendar-html.mjs" --marketing "${CLAU
 Show the user the table from `marketing/calendar.md` (read it; do not retype it from memory) and say:
 
 - Where the files are: `marketing/calendar.md` for reading, `marketing/calendar.json` for the plugin, `marketing/calendar.html` to browse the plan in a browser (open it from disk).
-- That topics and angles can be edited in `calendar.json` before creating posts, and that `/gtm-studio:create` writes every pending post, or one with `/gtm-studio:create YYYY-MM-DD`.
+- The time zone the times are in (from brand.md), or that brand.md has none and the times are local.
+- That topics and angles can be edited in `calendar.json` before creating posts, and that `/gtm-studio:create` writes every pending post, or specific ones with `/gtm-studio:create YYYY-MM-DD`.
 - If the start date was moved to a Monday, say so.

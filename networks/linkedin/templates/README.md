@@ -51,8 +51,8 @@ A slide in `slides.json` is `{ "template": "<name>", ...fields }`. Templates and
 | --- | --- | --- |
 | `title` | yes | The ask, as a benefit. |
 | `body` | no | What happens when they act. |
-| `url` | no | Short URL to show, e.g. `cvora.net`. |
-| `button` | no | Button-like label, e.g. "Pruébalo gratis". |
+| `url` | no | Short URL to show, e.g. `cvora.net`. Prefer this: it is what people type. |
+| `button` | no | Button-like label, e.g. "Pruébalo gratis". Purely visual: a PDF is not clickable, so the writer normally leaves it out. |
 | `kicker` | no | Small label. |
 
 ## Adding a template

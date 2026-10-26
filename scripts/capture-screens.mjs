@@ -4,13 +4,19 @@
 //
 // Usage:
 //   node capture-screens.mjs --url http://localhost:3000 --out DIR
-//        [--routes home,pricing] [--devices desktop,mobile]
+//        [--routes home,pricing,home@#how-it-works | --routes-file FILE]
+//        [--devices desktop,mobile] [--locale es]
 //        [--start "npm run dev" --cwd DIR --expect "Product name" [--port-arg --port]]
 //        [--timeout 120000] [--settle 1500] [--full-page] [--no-dismiss]
 //
-// Writes <out>/<route>-<device>.png for every route and device, plus
-// <out>/manifest.json. When --start is given, the dev server's output goes to
-// <out>/dev-server.log and the process tree is killed at the end.
+// A route can carry a CSS selector after "@": only that element is captured,
+// which is what makes a product screenshot readable on a phone. A routes file
+// is a JSON array of strings or { route, selector, name } objects.
+//
+// Writes <out>/<name>-<device>.png for every route and device, plus
+// <out>/manifest.json (file names relative to <out>). When --start is given,
+// the dev server's output goes to <out>/dev-server.log and the process tree is
+// killed at the end.
 //
 // If the port is already taken, the page is reused only when it mentions
 // --expect (the product name). Otherwise the app is started on a free port,
@@ -54,6 +60,47 @@ export function normalizeRoute(route) {
   if (r === '' || r === '.' || r === 'home') r = '/';
   if (!r.startsWith('/')) r = `/${r}`;
   return r;
+}
+
+function slugify(text) {
+  return String(text).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40);
+}
+
+/**
+ * Turns route specs into { route, selector, name } objects. A spec is a string
+ * "pricing" or "home@#how-it-works" (route@css-selector), or an object with
+ * `route`, optional `selector` and optional `name` (used for the file name).
+ */
+export function parseRouteSpecs(specs) {
+  const list = specs && specs.length ? specs : ['/'];
+  const seen = new Set();
+  const out = [];
+  for (const spec of list) {
+    let route;
+    let selector = null;
+    let name = null;
+    if (spec && typeof spec === 'object') {
+      route = normalizeRoute(spec.route);
+      selector = spec.selector ? String(spec.selector) : null;
+      name = spec.name ? slugify(spec.name) : null;
+    } else {
+      const text = String(spec || '');
+      const at = text.indexOf('@');
+      route = normalizeRoute(at === -1 ? text : text.slice(0, at));
+      selector = at === -1 ? null : text.slice(at + 1).trim() || null;
+    }
+    if (!name) name = routeSlug(route) + (selector ? `-${slugify(selector)}` : '');
+    const key = `${route}|${selector || ''}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push({ route, selector, name });
+  }
+  return out;
+}
+
+function pngSize(buf) {
+  if (buf.length < 24 || buf.toString('ascii', 1, 4) !== 'PNG') return { width: null, height: null };
+  return { width: buf.readUInt32BE(16), height: buf.readUInt32BE(20) };
 }
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -174,7 +221,15 @@ export async function captureScreens(options) {
   const url = String(options.url || '').replace(/\/$/, '');
   if (!/^https?:\/\//.test(url)) throw new CaptureError('--url must start with http:// or https://');
   const out = resolve(options.out);
-  const routes = [...new Set((options.routes && options.routes.length ? options.routes : ['/']).map(normalizeRoute))];
+  let specs = options.routes;
+  if (options.routesFile) {
+    try {
+      specs = JSON.parse(await readFile(resolve(options.routesFile), 'utf8'));
+    } catch (err) {
+      throw new CaptureError(`Cannot read the routes file ${options.routesFile}: ${err.message}`);
+    }
+  }
+  const routes = parseRouteSpecs(specs);
   const deviceNames = options.devices && options.devices.length ? options.devices : ['desktop', 'mobile'];
   for (const d of deviceNames) if (!DEVICES[d]) throw new CaptureError(`Unknown device "${d}". Use: ${Object.keys(DEVICES).join(', ')}.`);
   const timeout = Number(options.timeout || 120000);
@@ -240,8 +295,9 @@ export async function captureScreens(options) {
       for (const deviceName of deviceNames) {
         const context = await browser.newContext({ ...DEVICES[deviceName], locale: options.locale || undefined });
         const page = await context.newPage();
-        for (const route of routes) {
+        for (const { route, selector, name } of routes) {
           const target = `${captureUrl}${route}`;
+          const label = selector ? `${route} @ ${selector}` : route;
           try {
             try {
               await page.goto(target, { waitUntil: 'networkidle', timeout: 30000 });
@@ -251,13 +307,22 @@ export async function captureScreens(options) {
             if (options.dismiss !== false) await dismissBanners(page);
             await page.addStyleTag({ content: '::-webkit-scrollbar{display:none} html{scrollbar-width:none}' });
             if (settle > 0) await sleep(settle);
-            const file = join(out, `${routeSlug(route)}-${deviceName}.png`);
-            await page.screenshot({ path: file, fullPage: Boolean(options.fullPage) });
-            const { viewport, deviceScaleFactor } = DEVICES[deviceName];
-            entries.push({ route, device: deviceName, file, url: target, width: viewport.width * deviceScaleFactor, height: viewport.height * deviceScaleFactor });
-            options.log?.(`Captured ${route} (${deviceName}) → ${file}`);
+            const fileName = `${name}-${deviceName}.png`;
+            const file = join(out, fileName);
+            if (selector) {
+              const element = page.locator(selector).first();
+              await element.waitFor({ state: 'visible', timeout: 10000 });
+              await element.scrollIntoViewIfNeeded();
+              await sleep(300);
+              await element.screenshot({ path: file });
+            } else {
+              await page.screenshot({ path: file, fullPage: Boolean(options.fullPage) });
+            }
+            const { width, height } = pngSize(await readFile(file));
+            entries.push({ route, selector, device: deviceName, file: fileName, url: target, width, height });
+            options.log?.(`Captured ${label} (${deviceName}) → ${file}`);
           } catch (err) {
-            warnings.push(`${route} (${deviceName}): ${err.message.split('\n')[0]}`);
+            warnings.push(`${label} (${deviceName}): ${err.message.split('\n')[0]}`);
           }
         }
         await context.close();
@@ -271,7 +336,9 @@ export async function captureScreens(options) {
       options.log?.('Stopped the dev server.');
     }
   }
-  const manifest = { url: captureUrl, requestedUrl: url, capturedAt: new Date().toISOString(), browser: browserKind, screens: entries, warnings };
+  // `file` entries are relative to `dir` so the manifest stays valid when the
+  // project moves; the writer references them as screens/<file>.
+  const manifest = { dir: out, url: captureUrl, requestedUrl: url, locale: options.locale || null, capturedAt: new Date().toISOString(), browser: browserKind, screens: entries, warnings };
   await writeFile(join(out, 'manifest.json'), JSON.stringify(manifest, null, 2) + '\n', 'utf8');
   return manifest;
 }
@@ -294,7 +361,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   const args = parseArgs(process.argv.slice(2));
   if (args.help || !args.url || !args.out) {
     console.log(
-      'Usage: node capture-screens.mjs --url URL --out DIR [--routes home,pricing,es/app] [--devices desktop,mobile] [--start "npm run dev" --cwd DIR --expect "Product name" [--port-arg --port]] [--timeout 120000] [--settle 1500] [--full-page] [--no-dismiss]',
+      'Usage: node capture-screens.mjs --url URL --out DIR [--routes home,pricing,home@#demo | --routes-file FILE] [--devices desktop,mobile] [--locale es] [--start "npm run dev" --cwd DIR --expect "Product name" [--port-arg --port]] [--timeout 120000] [--settle 1500] [--full-page] [--no-dismiss]',
     );
     process.exit(args.help ? 0 : 1);
   }
@@ -303,6 +370,8 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     url: args.url,
     out: args.out,
     routes: split(args.routes),
+    routesFile: typeof args['routes-file'] === 'string' ? args['routes-file'] : undefined,
+    locale: typeof args.locale === 'string' ? args.locale : undefined,
     devices: split(args.devices),
     start: typeof args.start === 'string' ? args.start : undefined,
     cwd: args.cwd,

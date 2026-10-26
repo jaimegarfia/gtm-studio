@@ -34,7 +34,9 @@ Rules every GTM Studio writer follows, whatever the network. Network-specific ru
 ## Calls to action
 
 - One ask per post, stated plainly, with what happens after the click.
-- The link goes in the first comment. The post says "link in the first comment" in the content language. The checklist carries the comment text.
+- Where the link goes is decided once, in brand.md's tokens (`linkPlacement`), never by the writer:
+  - `first-comment` (the LinkedIn default: links in the body lower reach): no URL in the post; the post says "link in the first comment" in the content language; the checklist carries the comment text with the URL.
+  - `body`: the URL is the last line before the hashtags; the checklist's first comment is a short follow-up without repeating the pitch.
 - `cta` posts ask directly. Other goals end with a soft next step or nothing at all.
 
 ## Hashtags

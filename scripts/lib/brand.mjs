@@ -90,10 +90,14 @@ export function normalizeTokens(raw) {
     inversePath: l.inversePath || null,
     markPath: l.markPath || null,
   };
+  const linkPlacement = raw.linkPlacement === 'body' ? 'body' : 'first-comment';
+  const timezone = typeof raw.timezone === 'string' && raw.timezone.trim() ? raw.timezone.trim() : null;
   return {
     product: raw.product,
     language: raw.language.toLowerCase(),
     website: raw.website || null,
+    linkPlacement,
+    timezone,
     colors,
     fonts,
     logo,
@@ -176,6 +180,8 @@ export async function readBrand(brandPath) {
  * @property {string} product
  * @property {string} language
  * @property {string|null} website
+ * @property {'first-comment'|'body'} linkPlacement where the CTA link goes in posts
+ * @property {string|null} timezone IANA time zone of the audience, e.g. "Europe/Madrid"
  * @property {{primary:string,secondary:string,accent:string,background:string,surface:string,text:string,muted:string}} colors
  * @property {{heading:string,body:string,source:string}} fonts
  * @property {{path:string|null,inversePath:string|null,markPath:string|null}} logo

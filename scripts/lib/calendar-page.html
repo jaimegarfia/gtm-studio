@@ -41,13 +41,13 @@
   main { max-width: 1240px; margin: 0 auto; display: grid; gap: 22px; }
   .week { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px; }
   .week h2 { margin: 0 0 12px; font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); display: flex; justify-content: space-between; }
-  .grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 10px; }
-  .day { min-height: 118px; border-radius: 10px; border: 1px dashed var(--line); padding: 8px; display: flex; flex-direction: column; gap: 8px; }
+  .grid { display: grid; grid-template-columns: repeat(var(--cols, 7), minmax(0, 1fr)); gap: 10px; }
+  .day { min-width: 0; min-height: 118px; border-radius: 10px; border: 1px dashed var(--line); padding: 8px; display: flex; flex-direction: column; gap: 8px; }
   .day .label { font-size: 11px; color: var(--muted); font-weight: 600; display: flex; justify-content: space-between; }
-  .card { text-align: left; width: 100%; background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 10px; cursor: pointer; color: inherit; font: inherit; display: grid; gap: 6px; transition: transform .12s ease, box-shadow .12s ease; }
+  .card { text-align: left; width: 100%; min-width: 0; overflow: hidden; background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 10px; cursor: pointer; color: inherit; font: inherit; display: grid; gap: 6px; transition: transform .12s ease, box-shadow .12s ease; }
   .card:hover, .card:focus-visible { transform: translateY(-1px); box-shadow: var(--shadow); outline: none; border-color: var(--accent); }
   .card .top { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 4px 6px; font-size: 11px; color: var(--muted); }
-  .badge { display: inline-block; font-size: 10.5px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: var(--accent); color: var(--accent-ink); letter-spacing: 0.02em; white-space: nowrap; }
+  .badge { display: inline-block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; font-size: 10.5px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: var(--accent); color: var(--accent-ink); letter-spacing: 0.02em; white-space: nowrap; }
   .card .topic { font-weight: 600; font-size: 13px; line-height: 1.3; }
   .card .goal { font-size: 11.5px; color: var(--muted); }
   .card img { width: 100%; aspect-ratio: 4 / 5; object-fit: cover; border-radius: 6px; border: 1px solid var(--line); }
@@ -59,7 +59,7 @@
   dialog { border: none; border-radius: 18px; padding: 0; width: min(960px, calc(100vw - 32px)); max-height: calc(100vh - 32px); background: var(--surface); color: var(--text); box-shadow: var(--shadow); }
   dialog::backdrop { background: rgba(0, 0, 0, 0.45); backdrop-filter: blur(2px); }
   .modal { display: grid; grid-template-rows: auto auto 1fr; max-height: calc(100vh - 32px); }
-  .modal header { padding: 22px 24px 12px; display: block; }
+  .modal header { padding: 22px 56px 12px 24px; display: block; max-width: none; margin: 0; }
   .modal h3 { margin: 0 0 6px; font-size: 20px; }
   .meta { color: var(--muted); font-size: 13px; display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; }
   .close { position: absolute; right: 14px; top: 14px; background: var(--bg); border: 1px solid var(--line); border-radius: 999px; width: 34px; height: 34px; cursor: pointer; color: inherit; font-size: 18px; line-height: 1; }
@@ -136,17 +136,25 @@
   var stats = document.getElementById('stats');
   stats.appendChild(el('span', { class: 'stat' }, [el('i', { class: 'dot created' }), document.createTextNode(created + ' ' + P.created)]));
   stats.appendChild(el('span', { class: 'stat' }, [el('i', { class: 'dot pending' }), document.createTextNode(pending + ' ' + P.pending)]));
+  if (data.timezone) stats.appendChild(el('span', { class: 'stat', text: data.timezone }));
 
   var weeks = document.getElementById('weeks');
   var byDate = {};
   data.posts.forEach(function (p) { (byDate[p.date] = byDate[p.date] || []).push(p); });
+  // Only the weekdays that carry posts get a column (Mon = 0 … Sun = 6).
+  var active = {};
+  data.posts.forEach(function (p) { active[(new Date(p.date + 'T00:00:00Z').getUTCDay() + 6) % 7] = true; });
+  var dayIdx = Object.keys(active).map(Number).sort(function (a, b) { return a - b; });
+  if (!dayIdx.length) dayIdx = [0, 1, 2, 3, 4, 5, 6];
   var weekCount = Math.max.apply(null, data.posts.map(function (p) { return p.week; }).concat([1]));
   for (var w = 1; w <= weekCount; w++) {
     var monday = addDays(data.startDate, (w - 1) * 7);
     var section = el('section', { class: 'week' });
     section.appendChild(el('h2', {}, [el('span', { text: P.week + ' ' + w }), el('span', { text: monday + ' → ' + addDays(monday, 6) })]));
     var grid = el('div', { class: 'grid' });
-    for (var d = 0; d < 7; d++) {
+    grid.style.setProperty('--cols', dayIdx.length);
+    for (var k = 0; k < dayIdx.length; k++) {
+      var d = dayIdx[k];
       var date = addDays(monday, d);
       var posts = byDate[date] || [];
       var day = el('div', { class: 'day' + (posts.length ? '' : ' empty') });
@@ -187,7 +195,7 @@
     document.getElementById('dlg-title').textContent = p.topic;
     var meta = document.getElementById('dlg-meta');
     meta.innerHTML = '';
-    [p.date + ' · ' + p.time, L.formats[p.format] || p.format, L.goals[p.goal] || p.goal, (L.status[p.status] || p.status)].forEach(function (t) { meta.appendChild(el('span', { text: t })); });
+    [p.date + ' · ' + p.time + (data.timezone ? ' (' + data.timezone + ')' : ''), L.formats[p.format] || p.format, L.goals[p.goal] || p.goal, (L.status[p.status] || p.status)].forEach(function (t) { meta.appendChild(el('span', { text: t })); });
     meta.appendChild(el('span', { class: 'path', text: P.folder + ': ' + p.dir }));
 
     panels.post.innerHTML = '';

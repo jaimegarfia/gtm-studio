@@ -33,7 +33,7 @@ function slots() {
   return out;
 }
 
-const brandMd = (lang) => `# X\n\n<!-- gtm-studio:tokens -->\n\`\`\`json\n{"product":"CVora","language":"${lang}"}\n\`\`\`\n`;
+const brandMd = (lang) => `# X\n\n<!-- gtm-studio:tokens -->\n\`\`\`json\n{"product":"CVora","language":"${lang}","timezone":"America/Bogota"}\n\`\`\`\n`;
 
 async function project(lang = 'es') {
   const root = await mkdtemp(join(tmpdir(), 'gtm-cal-'));
@@ -85,6 +85,7 @@ test('renderCalendarMarkdown localizes labels', () => {
   const cal = buildCalendar({ network, slots: slots(), startDate: '2026-11-02', now: '2026-10-26T10:00:00Z' });
   const es = renderCalendarMarkdown(cal, network, { language: 'es', product: 'CVora' });
   assert.match(es, /Calendario de contenido para LinkedIn/);
+  assert.match(es, /Horas locales \(brand\.md no indica/);
   assert.match(es, /\| Semana \| Fecha \| Hora \| Formato \| Objetivo \| Tema \| Estado \|/);
   assert.match(es, /Carrusel/);
   assert.match(es, /Pendiente/);
@@ -101,8 +102,10 @@ test('initCalendar writes calendar.json and calendar.md, refuses to overwrite wi
   assert.equal(result.posts, 12);
   const json = JSON.parse(await readFile(join(marketing, 'calendar.json'), 'utf8'));
   assert.equal(json.posts.length, 12);
+  assert.equal(json.timezone, 'America/Bogota');
   const md = await readFile(join(marketing, 'calendar.md'), 'utf8');
   assert.match(md, /Topic 1/);
+  assert.match(md, /zona horaria del público, America\/Bogota/);
   await assert.rejects(initCalendar({ marketing, network, slots: slots(), startDate: '2026-11-02' }), /already exists/);
   const again = await initCalendar({ marketing, network, slots: slots(), startDate: '2026-11-09', force: true });
   assert.equal(again.startDate, '2026-11-09');

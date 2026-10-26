@@ -211,6 +211,14 @@ export async function renderPost(options) {
     if (name === 'screenshot') {
       const imagePath = resolveAsset(slide.image, assetRoots);
       if (imagePath) {
+        const buf = await readFile(imagePath);
+        if (buf.length > 24 && buf.toString('ascii', 1, 4) === 'PNG') {
+          const w = buf.readUInt32BE(16);
+          const h = buf.readUInt32BE(20);
+          if (w > 2200 || (slide.frame !== 'phone' && w / h < 0.9 && h > 1600)) {
+            warnings.push(`Slide ${i + 1}: ${slide.image} is a full-page screenshot (${w}x${h}); its text will be tiny on a phone. Capture one section with a CSS selector (route@selector) instead.`);
+          }
+        }
         data.image = await fileToDataUri(imagePath);
       } else {
         warnings.push(`Slide ${i + 1}: image not found (${slide.image || 'none given'}); rendered the text-only fallback.`);

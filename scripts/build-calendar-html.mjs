@@ -137,7 +137,7 @@ export async function buildCalendarHtml({ marketing, out }) {
     });
   }
 
-  const data = { product: tokens.product, network: network.name, startDate: calendar.startDate, generatedAt: new Date().toISOString(), labels, posts };
+  const data = { product: tokens.product, network: network.name, startDate: calendar.startDate, timezone: calendar.timezone || tokens.timezone || null, generatedAt: new Date().toISOString(), labels, posts };
   const json = JSON.stringify(data).replace(/<\/script/gi, '<\\/script').replace(/<!--/g, '<\\!--');
   const title = `${labels.title.replace('{network}', network.name)} — ${tokens.product}`;
   const template = await readFile(TEMPLATE, 'utf8');

@@ -2,7 +2,7 @@
 name: doctor
 description: Check that GTM Studio can run on this machine (Node, Playwright, browser) and show where the marketing/ folder stands.
 disable-model-invocation: true
-allowed-tools: Bash(node *)
+allowed-tools: Bash(node *) PowerShell(node *)
 ---
 
 # /gtm-studio:doctor

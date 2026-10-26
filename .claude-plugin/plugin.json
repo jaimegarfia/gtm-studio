@@ -1,7 +1,7 @@
 {
   "name": "gtm-studio",
   "displayName": "GTM Studio",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Go-to-market content studio for developers. Reads your product's code, defines a brand voice and generates ready-to-publish LinkedIn posts, carousels and a content calendar. Nothing is published automatically.",
   "author": {
     "name": "Jaime Garfia",

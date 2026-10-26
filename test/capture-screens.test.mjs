@@ -6,7 +6,7 @@ import { existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { probeBrowser } from '../scripts/lib/browser.mjs';
-import { captureScreens, routeSlug, normalizeRoute } from '../scripts/capture-screens.mjs';
+import { captureScreens, routeSlug, normalizeRoute, parseRouteSpecs } from '../scripts/capture-screens.mjs';
 
 const probe = await probeBrowser();
 const skip = probe.ok ? false : `no browser available: ${probe.error.split('\n')[0]}`;
@@ -40,7 +40,16 @@ test('normalizeRoute accepts bare names and undoes Git Bash path conversion', ()
   assert.equal(normalizeRoute('es/app'), '/es/app');
 });
 
-test('captures routes on a running server and writes a manifest', { skip }, async () => {
+test('parseRouteSpecs understands route@selector strings and objects', () => {
+  assert.deepEqual(parseRouteSpecs(['home', 'pricing@#plans', { route: 'check', selector: 'section.demo', name: 'Demo block' }, 'pricing@#plans']), [
+    { route: '/', selector: null, name: 'home' },
+    { route: '/pricing', selector: '#plans', name: 'pricing-plans' },
+    { route: '/check', selector: 'section.demo', name: 'demo-block' },
+  ]);
+  assert.deepEqual(parseRouteSpecs([]), [{ route: '/', selector: null, name: 'home' }]);
+});
+
+test('captures routes and selected elements on a running server and writes a manifest with relative files', { skip }, async () => {
   const server = createServer((req, res) => {
     res.setHeader('content-type', 'text/html');
     res.end(PAGE(req.url === '/pricing' ? 'Pricing' : 'Home'));
@@ -49,13 +58,19 @@ test('captures routes on a running server and writes a manifest', { skip }, asyn
   const { port } = server.address();
   const out = await mkdtemp(join(tmpdir(), 'gtm-cap-'));
   try {
-    const manifest = await captureScreens({ url: `http://127.0.0.1:${port}`, out, routes: ['/', '/pricing'], devices: ['desktop'], settle: 0 });
-    assert.equal(manifest.screens.length, 2);
+    const manifest = await captureScreens({ url: `http://127.0.0.1:${port}`, out, routes: ['/', '/pricing', 'pricing@h1'], devices: ['desktop'], settle: 0, locale: 'es' });
+    assert.equal(manifest.screens.length, 3);
     assert.ok(existsSync(join(out, 'home-desktop.png')));
     assert.ok(existsSync(join(out, 'pricing-desktop.png')));
+    assert.ok(existsSync(join(out, 'pricing-h1-desktop.png')));
     const saved = JSON.parse(await readFile(join(out, 'manifest.json'), 'utf8'));
-    assert.equal(saved.screens[1].route, '/pricing');
+    assert.equal(saved.dir, out);
+    assert.equal(saved.locale, 'es');
+    assert.equal(saved.screens[0].file, 'home-desktop.png');
     assert.equal(saved.screens[0].width, 2880);
+    assert.equal(saved.screens[1].route, '/pricing');
+    assert.equal(saved.screens[2].selector, 'h1');
+    assert.ok(saved.screens[2].height < 400, 'element shot is the h1, not the whole viewport');
   } finally {
     server.close();
   }

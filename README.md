@@ -61,7 +61,7 @@ Inside the session, `/gtm-studio:doctor` confirms the plugin loaded. Edit the pl
 | `/gtm-studio:doctor` | Checks Node, Playwright and the browser, and shows where `marketing/` stands. |
 | `/gtm-studio:brand` | Reads the project, asks you at most five questions in one message, writes `marketing/brand.md`. |
 | `/gtm-studio:plan [YYYY-MM-DD]` | Builds the 4-week calendar (`calendar.md`, `calendar.json`, `calendar.html`). Starts next Monday, or on the Monday of the date you give. |
-| `/gtm-studio:create [YYYY-MM-DD]` | Writes every pending post, or only the one on that date. Never overwrites a created post unless you ask. |
+| `/gtm-studio:create [dates] [capture=…]` | Writes every pending post, or only the given dates (`2026-11-10,2026-11-12`). `capture=local`, `live`, `running:<url>` or `skip` picks how screenshots are taken without being asked. Never overwrites a created post unless you ask. |
 
 `brand.md` is the gate: `plan` and `create` refuse to run without it. Review it before planning; everything written later follows it.
 
@@ -108,7 +108,7 @@ Topics and angles live in `calendar.json`; edit them if you like before the next
 /gtm-studio:create
 ```
 
-GTM Studio asks how to capture screenshots: start the app with `npm run dev` and capture the home and pricing routes, use an app you already have running, capture the live site, or skip. Then it writes the posts. For each one you get a folder:
+GTM Studio asks how to capture screenshots: start the app with `npm run dev` and capture the routes the plan named (a whole page, or one section by CSS selector so the text stays readable on a phone), use an app you already have running, capture the live site, or skip. If port 3000 is busy with another project, it notices and starts the app on a free port. Then it writes the posts. For each one you get a folder:
 
 ```
 marketing/posts/2026-11-10-roadmap-spreadsheet-lying/
@@ -126,6 +126,20 @@ Text posts have `post.md` and `checklist.md` only. Screenshot posts have one `sl
 
 Run `/gtm-studio:create 2026-11-10` to redo a single post after editing its angle, and confirm when it asks to overwrite.
 
+### Headless use
+
+The commands also run without an interactive session, for example from a script or another agent. From the product folder:
+
+```bash
+claude -p "/gtm-studio:brand" --output-format json \
+  --permission-mode acceptEdits \
+  --allowedTools "Read,Write,Edit,Glob,Grep,Agent,Bash(node *),PowerShell(node *)" < /dev/null
+```
+
+The JSON output carries a `session_id`. `brand` stops to ask its five questions; answer them with `claude -p --resume <session_id> "your answers"`. Use `--resume` rather than `--continue`, which picks the most recent conversation in the folder and may not be yours. For `create`, pass `capture=local` (or `live`, `running:<url>`, `skip`) so it does not have to ask.
+
+Expect roughly 5 to 10 minutes and a few dollars per post with a frontier model; `brand` and `plan` cost about the same as two posts each.
+
 ## What gets generated, and where
 
 Everything lands in `marketing/` at the root of your project. Nothing else in your repository is touched.
@@ -136,10 +150,10 @@ Everything lands in `marketing/` at the root of your project. Nothing else in yo
 | `marketing/calendar.md` | The calendar as a table, in your product's language. |
 | `marketing/calendar.json` | The calendar the plugin reads and updates (status per post). |
 | `marketing/calendar.html` | Self-contained review page. Thumbnails embedded, full images and PDFs linked. |
-| `marketing/screens/` | Screenshots captured from your app, plus `manifest.json`. Delete the folder to capture again. |
+| `marketing/screens/` | Screenshots captured from your app, plus `manifest.json`. Delete the folder to capture again. Screens the script cannot take (behind a login, after an upload) are listed as manual captures in the checklist. |
 | `marketing/posts/<date>-<slug>/` | One folder per post. |
 
-Content is written in the product's language (detected from i18n config, `<html lang>` or the README, and editable in `brand.md`). The plugin itself, its skills and this README are in English.
+Content is written in the product's language (detected from i18n config, `<html lang>` or the README, and editable in `brand.md`). Publishing times are in the audience's time zone, which `brand` asks for and stores in the tokens. Where the CTA link goes (first comment, the LinkedIn default, or the post body) is also a token, so every post follows the same rule. The plugin itself, its skills and this README are in English.
 
 ## How it is built
 

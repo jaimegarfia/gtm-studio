@@ -1,0 +1,37 @@
+{
+  "id": "linkedin",
+  "name": "LinkedIn",
+  "cadence": {
+    "weeks": 4,
+    "postsPerWeek": 3,
+    "days": ["tue", "wed", "thu"],
+    "time": "08:30"
+  },
+  "formats": {
+    "carousel": {
+      "label": "Carousel (PDF document)",
+      "slides": { "min": 5, "max": 9 },
+      "image": { "width": 1080, "height": 1350 },
+      "pdf": true
+    },
+    "text": {
+      "label": "Text-only post"
+    },
+    "screenshot": {
+      "label": "Post with one product screenshot",
+      "image": { "width": 1080, "height": 1350 },
+      "frames": ["browser", "phone"]
+    }
+  },
+  "goals": ["problem", "product", "story", "cta"],
+  "mix": {
+    "formats": { "carousel": 5, "text": 4, "screenshot": 3 },
+    "goals": { "problem": 3, "product": 4, "story": 2, "cta": 3 }
+  },
+  "text": {
+    "maxChars": 3000,
+    "hookChars": 210,
+    "hashtags": { "min": 3, "max": 5 }
+  },
+  "firstComment": true
+}

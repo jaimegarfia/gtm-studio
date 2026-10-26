@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="__GTM_LANG__">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>__GTM_TITLE__</title>
+<style>
+  :root {
+    --bg: #f6f5f2;
+    --surface: #ffffff;
+    --text: #17171a;
+    --muted: #6b6b73;
+    --line: #e2e0da;
+    --accent: __GTM_ACCENT__;
+    --accent-ink: __GTM_ACCENT_INK__;
+    --ok: #1f7a4d;
+    --pending: #b7791f;
+    --shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+    --radius: 14px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #141416; --surface: #1e1e22; --text: #f1f0ec; --muted: #a2a1a8; --line: #2d2d33; --shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: var(--bg); color: var(--text);
+    font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+    padding: 0 16px 64px;
+  }
+  header { max-width: 1240px; margin: 0 auto; padding: 36px 0 20px; display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px; }
+  h1 { margin: 0; font-size: 26px; letter-spacing: -0.01em; }
+  h1 small { display: block; font-size: 14px; font-weight: 500; color: var(--muted); margin-top: 6px; }
+  .stats { display: flex; gap: 10px; flex-wrap: wrap; }
+  .stat { background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 6px 14px; font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; gap: 8px; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+  .dot.created { background: var(--ok); }
+  .dot.pending { background: var(--pending); }
+  main { max-width: 1240px; margin: 0 auto; display: grid; gap: 22px; }
+  .week { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px; }
+  .week h2 { margin: 0 0 12px; font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); display: flex; justify-content: space-between; }
+  .grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 10px; }
+  .day { min-height: 118px; border-radius: 10px; border: 1px dashed var(--line); padding: 8px; display: flex; flex-direction: column; gap: 8px; }
+  .day .label { font-size: 11px; color: var(--muted); font-weight: 600; display: flex; justify-content: space-between; }
+  .card { text-align: left; width: 100%; background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 10px; cursor: pointer; color: inherit; font: inherit; display: grid; gap: 6px; transition: transform .12s ease, box-shadow .12s ease; }
+  .card:hover, .card:focus-visible { transform: translateY(-1px); box-shadow: var(--shadow); outline: none; border-color: var(--accent); }
+  .card .top { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 4px 6px; font-size: 11px; color: var(--muted); }
+  .badge { display: inline-block; font-size: 10.5px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: var(--accent); color: var(--accent-ink); letter-spacing: 0.02em; white-space: nowrap; }
+  .card .topic { font-weight: 600; font-size: 13px; line-height: 1.3; }
+  .card .goal { font-size: 11.5px; color: var(--muted); }
+  .card img { width: 100%; aspect-ratio: 4 / 5; object-fit: cover; border-radius: 6px; border: 1px solid var(--line); }
+  @media (max-width: 900px) {
+    .grid { grid-template-columns: 1fr; }
+    .day:empty, .day.empty { display: none; }
+    .day { min-height: 0; }
+  }
+  dialog { border: none; border-radius: 18px; padding: 0; width: min(960px, calc(100vw - 32px)); max-height: calc(100vh - 32px); background: var(--surface); color: var(--text); box-shadow: var(--shadow); }
+  dialog::backdrop { background: rgba(0, 0, 0, 0.45); backdrop-filter: blur(2px); }
+  .modal { display: grid; grid-template-rows: auto auto 1fr; max-height: calc(100vh - 32px); }
+  .modal header { padding: 22px 24px 12px; display: block; }
+  .modal h3 { margin: 0 0 6px; font-size: 20px; }
+  .meta { color: var(--muted); font-size: 13px; display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; }
+  .close { position: absolute; right: 14px; top: 14px; background: var(--bg); border: 1px solid var(--line); border-radius: 999px; width: 34px; height: 34px; cursor: pointer; color: inherit; font-size: 18px; line-height: 1; }
+  .tabs { display: flex; gap: 4px; padding: 0 24px; border-bottom: 1px solid var(--line); }
+  .tab { background: none; border: none; border-bottom: 2px solid transparent; padding: 10px 12px; cursor: pointer; font: inherit; font-weight: 600; color: var(--muted); }
+  .tab[aria-selected="true"] { color: var(--text); border-bottom-color: var(--accent); }
+  .panel { padding: 20px 24px 26px; overflow: auto; }
+  .panel[hidden] { display: none; }
+  pre.post { white-space: pre-wrap; word-wrap: break-word; font-family: inherit; font-size: 15px; line-height: 1.6; margin: 0; background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 18px; }
+  .toolbar { display: flex; gap: 10px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
+  .btn { background: var(--accent); color: var(--accent-ink); border: none; border-radius: 999px; padding: 8px 16px; font: inherit; font-weight: 700; cursor: pointer; text-decoration: none; display: inline-block; }
+  .btn.secondary { background: var(--bg); color: var(--text); border: 1px solid var(--line); }
+  .thumbs { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+  .thumbs a { display: block; border-radius: 10px; overflow: hidden; border: 1px solid var(--line); }
+  .thumbs img { width: 100%; display: block; aspect-ratio: 4 / 5; object-fit: cover; }
+  .checklist h1, .checklist h2, .checklist h3 { font-size: 15px; margin: 18px 0 6px; }
+  .checklist h1:first-child, .checklist h2:first-child { margin-top: 0; }
+  .checklist ul, .checklist ol { margin: 4px 0 10px; padding-left: 22px; }
+  .checklist li { margin: 3px 0; }
+  .checklist code { background: var(--bg); border: 1px solid var(--line); padding: 1px 6px; border-radius: 6px; font-size: 13px; }
+  .checklist p { margin: 6px 0; }
+  .empty { color: var(--muted); font-style: italic; }
+  .path { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; color: var(--muted); word-break: break-all; }
+</style>
+</head>
+<body>
+<header>
+  <h1>__GTM_TITLE__<small>__GTM_SUBTITLE__</small></h1>
+  <div class="stats" id="stats"></div>
+</header>
+<main id="weeks"></main>
+
+<dialog id="dlg" aria-labelledby="dlg-title">
+  <div class="modal">
+    <header>
+      <button class="close" id="close" aria-label="__GTM_CLOSE__">×</button>
+      <h3 id="dlg-title"></h3>
+      <div class="meta" id="dlg-meta"></div>
+    </header>
+    <div class="tabs" role="tablist" id="tabs"></div>
+    <section class="panel" id="panel-post" role="tabpanel"></section>
+    <section class="panel" id="panel-images" role="tabpanel" hidden></section>
+    <section class="panel" id="panel-checklist" role="tabpanel" hidden></section>
+  </div>
+</dialog>
+
+<script id="gtm-data" type="application/json">__GTM_DATA__</script>
+<script>
+(function () {
+  var data = JSON.parse(document.getElementById('gtm-data').textContent);
+  var L = data.labels;
+  var P = L.page;
+
+  function el(tag, attrs, children) {
+    var node = document.createElement(tag);
+    Object.keys(attrs || {}).forEach(function (k) {
+      if (k === 'class') node.className = attrs[k];
+      else if (k === 'text') node.textContent = attrs[k];
+      else if (k === 'html') node.innerHTML = attrs[k];
+      else node.setAttribute(k, attrs[k]);
+    });
+    (children || []).forEach(function (c) { if (c) node.appendChild(c); });
+    return node;
+  }
+
+  function addDays(iso, n) {
+    var d = new Date(iso + 'T00:00:00Z');
+    d.setUTCDate(d.getUTCDate() + n);
+    return d.toISOString().slice(0, 10);
+  }
+
+  var created = data.posts.filter(function (p) { return p.status === 'created'; }).length;
+  var pending = data.posts.length - created;
+  var stats = document.getElementById('stats');
+  stats.appendChild(el('span', { class: 'stat' }, [el('i', { class: 'dot created' }), document.createTextNode(created + ' ' + P.created)]));
+  stats.appendChild(el('span', { class: 'stat' }, [el('i', { class: 'dot pending' }), document.createTextNode(pending + ' ' + P.pending)]));
+
+  var weeks = document.getElementById('weeks');
+  var byDate = {};
+  data.posts.forEach(function (p) { (byDate[p.date] = byDate[p.date] || []).push(p); });
+  var weekCount = Math.max.apply(null, data.posts.map(function (p) { return p.week; }).concat([1]));
+  for (var w = 1; w <= weekCount; w++) {
+    var monday = addDays(data.startDate, (w - 1) * 7);
+    var section = el('section', { class: 'week' });
+    section.appendChild(el('h2', {}, [el('span', { text: P.week + ' ' + w }), el('span', { text: monday + ' → ' + addDays(monday, 6) })]));
+    var grid = el('div', { class: 'grid' });
+    for (var d = 0; d < 7; d++) {
+      var date = addDays(monday, d);
+      var posts = byDate[date] || [];
+      var day = el('div', { class: 'day' + (posts.length ? '' : ' empty') });
+      day.appendChild(el('div', { class: 'label' }, [el('span', { text: P.days[d] }), el('span', { text: date.slice(5) })]));
+      posts.forEach(function (p) { day.appendChild(card(p)); });
+      grid.appendChild(day);
+    }
+    section.appendChild(grid);
+    weeks.appendChild(section);
+  }
+
+  function card(p) {
+    var thumb = p.thumbs && p.thumbs.length ? el('img', { src: p.thumbs[0].src, alt: '' }) : null;
+    var c = el('button', { class: 'card', type: 'button', 'aria-haspopup': 'dialog' }, [
+      el('div', { class: 'top' }, [el('span', { class: 'badge', text: L.formats[p.format] || p.format }), el('span', {}, [el('i', { class: 'dot ' + p.status }), document.createTextNode(' ' + p.time)])]),
+      thumb,
+      el('div', { class: 'topic', text: p.topic }),
+      el('div', { class: 'goal', text: L.goals[p.goal] || p.goal })
+    ]);
+    c.addEventListener('click', function () { open(p); });
+    return c;
+  }
+
+  var dlg = document.getElementById('dlg');
+  var panels = { post: document.getElementById('panel-post'), images: document.getElementById('panel-images'), checklist: document.getElementById('panel-checklist') };
+  var tabs = document.getElementById('tabs');
+  [['post', P.post], ['images', P.images], ['checklist', P.checklist]].forEach(function (t) {
+    var b = el('button', { class: 'tab', role: 'tab', type: 'button', text: t[1], 'data-tab': t[0] });
+    b.addEventListener('click', function () { select(t[0]); });
+    tabs.appendChild(b);
+  });
+  function select(name) {
+    Object.keys(panels).forEach(function (k) { panels[k].hidden = k !== name; });
+    Array.prototype.forEach.call(tabs.children, function (b) { b.setAttribute('aria-selected', b.getAttribute('data-tab') === name ? 'true' : 'false'); });
+  }
+
+  function open(p) {
+    document.getElementById('dlg-title').textContent = p.topic;
+    var meta = document.getElementById('dlg-meta');
+    meta.innerHTML = '';
+    [p.date + ' · ' + p.time, L.formats[p.format] || p.format, L.goals[p.goal] || p.goal, (L.status[p.status] || p.status)].forEach(function (t) { meta.appendChild(el('span', { text: t })); });
+    meta.appendChild(el('span', { class: 'path', text: P.folder + ': ' + p.dir }));
+
+    panels.post.innerHTML = '';
+    if (p.status !== 'created' || !p.text) {
+      panels.post.appendChild(el('p', { class: 'empty', text: P.pendingText }));
+    } else {
+      var copy = el('button', { class: 'btn', type: 'button', text: P.copy });
+      copy.addEventListener('click', function () {
+        navigator.clipboard.writeText(p.text).then(function () { copy.textContent = P.copied; setTimeout(function () { copy.textContent = P.copy; }, 1500); });
+      });
+      panels.post.appendChild(el('div', { class: 'toolbar' }, [copy, el('span', { class: 'path', text: p.dir + '/post.md' })]));
+      panels.post.appendChild(el('pre', { class: 'post', text: p.text }));
+    }
+
+    panels.images.innerHTML = '';
+    if (p.images && p.images.length) {
+      var bar = el('div', { class: 'toolbar' });
+      if (p.pdf) bar.appendChild(el('a', { class: 'btn', href: p.pdf, target: '_blank', rel: 'noopener', text: P.openPdf }));
+      panels.images.appendChild(bar);
+      var grid = el('div', { class: 'thumbs' });
+      p.images.forEach(function (img, i) {
+        var t = p.thumbs && p.thumbs[i] ? p.thumbs[i].src : img;
+        grid.appendChild(el('a', { href: img, target: '_blank', rel: 'noopener', title: P.openImage }, [el('img', { src: t, alt: 'slide ' + (i + 1) })]));
+      });
+      panels.images.appendChild(grid);
+    } else {
+      panels.images.appendChild(el('p', { class: 'empty', text: p.status === 'created' ? P.noImages : P.pendingText }));
+    }
+
+    panels.checklist.innerHTML = '';
+    if (p.checklistHtml) panels.checklist.appendChild(el('div', { class: 'checklist', html: p.checklistHtml }));
+    else panels.checklist.appendChild(el('p', { class: 'empty', text: P.pendingText }));
+
+    select('post');
+    dlg.showModal();
+  }
+  document.getElementById('close').addEventListener('click', function () { dlg.close(); });
+  dlg.addEventListener('click', function (e) { if (e.target === dlg) dlg.close(); });
+})();
+</script>
+</body>
+</html>

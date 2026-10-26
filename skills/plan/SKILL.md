@@ -63,10 +63,16 @@ Omit `--start` when the user gave no date. Add `--force` only after the user agr
 
 If the script rejects the slots, fix the array and run it again. Then delete `marketing/.gtm-slots.json`.
 
+Build the calendar page so the user can already browse the plan:
+
+```
+node "${CLAUDE_PLUGIN_ROOT}/scripts/build-calendar-html.mjs" --marketing "${CLAUDE_PROJECT_DIR}/marketing"
+```
+
 ## 5. Report
 
 Show the user the table from `marketing/calendar.md` (read it; do not retype it from memory) and say:
 
-- Where the two files are: `marketing/calendar.md` for reading, `marketing/calendar.json` for the plugin.
+- Where the files are: `marketing/calendar.md` for reading, `marketing/calendar.json` for the plugin, `marketing/calendar.html` to browse the plan in a browser (open it from disk).
 - That topics and angles can be edited in `calendar.json` before creating posts, and that `/gtm-studio:create` writes every pending post, or one with `/gtm-studio:create YYYY-MM-DD`.
 - If the start date was moved to a Monday, say so.

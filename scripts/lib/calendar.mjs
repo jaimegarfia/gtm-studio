@@ -184,8 +184,19 @@ const LABELS = {
   },
 };
 
+const PAGE_LABELS = {
+  en: { subtitle: 'Nothing here is published automatically. Open a post, copy its text and follow the checklist.', created: 'created', pending: 'pending', post: 'Post', images: 'Images', checklist: 'Checklist', copy: 'Copy text', copied: 'Copied', pendingText: 'This post has not been written yet. Run /gtm-studio:create in Claude Code.', openPdf: 'Open carousel.pdf', openImage: 'Open full size', folder: 'Folder', noImages: 'This post has no images.', week: 'Week', close: 'Close', days: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] },
+  es: { subtitle: 'Nada se publica automáticamente. Abre una publicación, copia el texto y sigue el checklist.', created: 'creadas', pending: 'pendientes', post: 'Texto', images: 'Imágenes', checklist: 'Checklist', copy: 'Copiar texto', copied: 'Copiado', pendingText: 'Esta publicación aún no se ha creado. Ejecuta /gtm-studio:create en Claude Code.', openPdf: 'Abrir carousel.pdf', openImage: 'Ver a tamaño completo', folder: 'Carpeta', noImages: 'Esta publicación no lleva imágenes.', week: 'Semana', close: 'Cerrar', days: ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'] },
+  pt: { subtitle: 'Nada é publicado automaticamente. Abra uma publicação, copie o texto e siga o checklist.', created: 'criadas', pending: 'pendentes', post: 'Texto', images: 'Imagens', checklist: 'Checklist', copy: 'Copiar texto', copied: 'Copiado', pendingText: 'Esta publicação ainda não foi criada. Execute /gtm-studio:create no Claude Code.', openPdf: 'Abrir carousel.pdf', openImage: 'Ver em tamanho real', folder: 'Pasta', noImages: 'Esta publicação não tem imagens.', week: 'Semana', close: 'Fechar', days: ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'] },
+  fr: { subtitle: "Rien n'est publié automatiquement. Ouvrez une publication, copiez le texte et suivez la checklist.", created: 'créées', pending: 'en attente', post: 'Texte', images: 'Images', checklist: 'Checklist', copy: 'Copier le texte', copied: 'Copié', pendingText: "Cette publication n'a pas encore été créée. Lancez /gtm-studio:create dans Claude Code.", openPdf: 'Ouvrir carousel.pdf', openImage: 'Voir en taille réelle', folder: 'Dossier', noImages: "Cette publication n'a pas d'images.", week: 'Semaine', close: 'Fermer', days: ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'] },
+  de: { subtitle: 'Nichts wird automatisch veröffentlicht. Beitrag öffnen, Text kopieren, Checkliste abarbeiten.', created: 'erstellt', pending: 'offen', post: 'Text', images: 'Bilder', checklist: 'Checkliste', copy: 'Text kopieren', copied: 'Kopiert', pendingText: 'Dieser Beitrag wurde noch nicht erstellt. Führe /gtm-studio:create in Claude Code aus.', openPdf: 'carousel.pdf öffnen', openImage: 'In voller Größe öffnen', folder: 'Ordner', noImages: 'Dieser Beitrag hat keine Bilder.', week: 'Woche', close: 'Schließen', days: ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'] },
+  it: { subtitle: 'Niente viene pubblicato automaticamente. Apri un post, copia il testo e segui la checklist.', created: 'creati', pending: 'in sospeso', post: 'Testo', images: 'Immagini', checklist: 'Checklist', copy: 'Copia testo', copied: 'Copiato', pendingText: 'Questo post non è ancora stato creato. Esegui /gtm-studio:create in Claude Code.', openPdf: 'Apri carousel.pdf', openImage: 'Apri a grandezza naturale', folder: 'Cartella', noImages: 'Questo post non ha immagini.', week: 'Settimana', close: 'Chiudi', days: ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'] },
+};
+
 export function labelsFor(language) {
-  return LABELS[String(language || 'en').slice(0, 2).toLowerCase()] || LABELS.en;
+  const key = String(language || 'en').slice(0, 2).toLowerCase();
+  const base = LABELS[key] || LABELS.en;
+  return { ...base, page: PAGE_LABELS[key] || PAGE_LABELS.en };
 }
 
 function weekdayShort(iso, language) {

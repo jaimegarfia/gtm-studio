@@ -1,0 +1,22 @@
+{
+  "name": "gtm-studio",
+  "displayName": "GTM Studio",
+  "version": "0.1.0",
+  "description": "Go-to-market content studio for developers. Reads your product's code, defines a brand voice and generates ready-to-publish LinkedIn posts, carousels and a content calendar. Nothing is published automatically.",
+  "author": {
+    "name": "Jaime Garfia",
+    "url": "https://github.com/jaimegarfia"
+  },
+  "homepage": "https://github.com/jaimegarfia/gtm-studio",
+  "repository": "https://github.com/jaimegarfia/gtm-studio",
+  "license": "MIT",
+  "keywords": [
+    "marketing",
+    "go-to-market",
+    "linkedin",
+    "social-media",
+    "content",
+    "carousel",
+    "playwright"
+  ]
+}

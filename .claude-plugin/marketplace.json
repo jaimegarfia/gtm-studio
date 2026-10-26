@@ -1,0 +1,17 @@
+{
+  "name": "gtm-studio",
+  "description": "GTM Studio: go-to-market content generation for products built by developers",
+  "owner": {
+    "name": "Jaime Garfia",
+    "url": "https://github.com/jaimegarfia"
+  },
+  "plugins": [
+    {
+      "name": "gtm-studio",
+      "source": "./",
+      "description": "Reads your product's code, defines a brand voice and generates ready-to-publish LinkedIn posts, carousels and a content calendar. Nothing is published automatically.",
+      "category": "marketing",
+      "tags": ["marketing", "go-to-market", "linkedin", "content", "carousel"]
+    }
+  ]
+}

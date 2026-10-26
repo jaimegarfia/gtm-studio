@@ -17,7 +17,7 @@ async function fixture(files) {
 
 test('monorepo: finds the Next.js app in frontend/, Tailwind v4 tokens, i18n and logos', async () => {
   const root = await fixture({
-    'README.md': '# CVora\n\nCrea tu currículum con inteligencia artificial y consigue más entrevistas. Es gratis para empezar.\n\nhttps://cvora.net\n',
+    'README.md': '# Here are your Instructions\n\nCVora: crea tu currículum con inteligencia artificial y consigue más entrevistas. Es gratis para empezar.\n\nhttps://cvora.net\n',
     'frontend/package.json': {
       name: 'cvora-web',
       scripts: { dev: 'next dev', build: 'next build' },
@@ -27,6 +27,9 @@ test('monorepo: finds the Next.js app in frontend/, Tailwind v4 tokens, i18n and
     'frontend/src/app/globals.css': '@import "tailwindcss";\n@theme {\n  --color-primary: #123456;\n  --color-accent: oklch(0.7 0.1 200);\n  --font-sans: "Inter", sans-serif;\n}\n',
     'frontend/src/app/[locale]/page.tsx': 'export default function Page() { return <main>Hero</main>; }',
     'frontend/src/app/[locale]/pricing/page.tsx': 'export default function Pricing() { return null; }',
+    'frontend/src/app/[locale]/app/page.tsx': 'export default function LoggedInApp() { return null; }',
+    'frontend/src/app/[locale]/[...rest]/page.tsx': 'export default function NotFound() { return null; }',
+    'frontend/src/app/(auth)/login/page.tsx': 'export default function Login() { return null; }',
     'frontend/src/i18n/routing.ts': "export const routing = { locales: ['es', 'en'], defaultLocale: 'es' };",
     'frontend/messages/es.json': { home: { title: 'Hola' } },
     'frontend/messages/en.json': { home: { title: 'Hello' } },
@@ -55,8 +58,14 @@ test('monorepo: finds the Next.js app in frontend/, Tailwind v4 tokens, i18n and
 
   assert.ok(result.logos.includes('brand/cvora-wordmark.svg'));
   assert.ok(result.logos.includes('brand/cvora-mark.svg'));
-  assert.ok(result.landing.some((p) => p.endsWith('page.tsx') && !p.includes('pricing')));
+  assert.ok(result.landing.includes('frontend/src/app/[locale]/page.tsx'));
+  assert.ok(!result.landing.some((p) => p.includes('[locale]/app/')), 'logged-in area is not landing copy');
+  assert.ok(!result.landing.some((p) => p.includes('[...rest]')), 'catch-all routes are not landing copy');
+  assert.ok(!result.landing.some((p) => p.includes('(auth)')), 'auth pages are not landing copy');
   assert.ok(result.pricing.some((p) => p.includes('pricing')));
+  assert.equal(result.app.portArg, '-p');
+  assert.ok(!result.productNames.includes('Here are your Instructions'), 'boilerplate README title is ignored');
+  assert.ok(result.productNames.includes('cvora-web'));
   assert.equal(result.readme, 'README.md');
   assert.ok(result.urls.includes('https://cvora.net'));
   assert.ok(!JSON.stringify(result).includes('node_modules'));

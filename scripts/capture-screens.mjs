@@ -4,17 +4,23 @@
 //
 // Usage:
 //   node capture-screens.mjs --url http://localhost:3000 --out DIR
-//        [--routes /,/pricing] [--devices desktop,mobile]
-//        [--start "npm run dev" --cwd DIR] [--timeout 120000] [--settle 1500]
-//        [--full-page] [--no-dismiss]
+//        [--routes home,pricing] [--devices desktop,mobile]
+//        [--start "npm run dev" --cwd DIR --expect "Product name" [--port-arg --port]]
+//        [--timeout 120000] [--settle 1500] [--full-page] [--no-dismiss]
 //
 // Writes <out>/<route>-<device>.png for every route and device, plus
 // <out>/manifest.json. When --start is given, the dev server's output goes to
 // <out>/dev-server.log and the process tree is killed at the end.
+//
+// If the port is already taken, the page is reused only when it mentions
+// --expect (the product name). Otherwise the app is started on a free port,
+// passed through the PORT environment variable and, when --port-arg is given,
+// appended to the command as `-- <port-arg> <port>` (Vite, Astro, Angular…).
 
 import { spawn, spawnSync } from 'node:child_process';
-import { existsSync, openSync, closeSync } from 'node:fs';
+import { openSync, closeSync } from 'node:fs';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { createServer } from 'node:net';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { launchBrowser } from './lib/browser.mjs';
@@ -55,10 +61,40 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 async function isUp(url) {
   try {
     const res = await fetch(url, { redirect: 'manual', signal: AbortSignal.timeout(5000) });
-    return res.status < 500 || res.status === 503 ? res.status < 500 : false;
+    return res.status < 500;
   } catch {
     return false;
   }
+}
+
+/** Fetches the page and reports whether it mentions `expect` (case-insensitive). */
+async function looksLike(url, expect) {
+  try {
+    const res = await fetch(url, { redirect: 'follow', signal: AbortSignal.timeout(8000) });
+    const html = await res.text();
+    const title = (html.match(/<title[^>]*>([^<]*)<\/title>/i) || [])[1] || '';
+    const needle = String(expect).toLowerCase();
+    return { match: html.toLowerCase().includes(needle), title: title.trim() };
+  } catch {
+    return { match: false, title: '' };
+  }
+}
+
+export function freePort() {
+  return new Promise((res, rej) => {
+    const s = createServer();
+    s.once('error', rej);
+    s.listen(0, '127.0.0.1', () => {
+      const { port } = s.address();
+      s.close(() => res(port));
+    });
+  });
+}
+
+function withPort(url, port) {
+  const u = new URL(url);
+  u.port = String(port);
+  return u.toString().replace(/\/$/, '');
 }
 
 async function tail(file, lines = 30) {
@@ -90,14 +126,16 @@ function killTree(child) {
 /**
  * Starts the dev server and waits until `url` answers.
  */
-export async function startServer({ command, cwd, url, timeout, logFile }) {
+export async function startServer({ command, cwd, url, timeout, logFile, port }) {
   const fd = openSync(logFile, 'a');
+  const env = { ...process.env, BROWSER: 'none', FORCE_COLOR: '0', CI: process.env.CI || '1' };
+  if (port) env.PORT = String(port);
   const child = spawn(command, {
     cwd,
     shell: true,
     detached: process.platform !== 'win32',
     stdio: ['ignore', fd, fd],
-    env: { ...process.env, BROWSER: 'none', FORCE_COLOR: '0', CI: process.env.CI || '1' },
+    env,
   });
   closeSync(fd);
   const started = Date.now();
@@ -144,20 +182,56 @@ export async function captureScreens(options) {
   await mkdir(out, { recursive: true });
 
   let server = null;
+  let captureUrl = url;
+  const warnings = [];
   const logFile = join(out, 'dev-server.log');
   if (options.start) {
+    const cwd = options.cwd ? resolve(options.cwd) : process.cwd();
+    let startIt = true;
     if (await isUp(url)) {
-      options.log?.(`Something already answers at ${url}; not starting "${options.start}".`);
-    } else {
-      options.log?.(`Starting "${options.start}" in ${options.cwd || process.cwd()} and waiting for ${url}…`);
-      server = await startServer({ command: options.start, cwd: options.cwd ? resolve(options.cwd) : process.cwd(), url, timeout, logFile });
+      // Something listens on that port. Never capture it blindly: it may be a
+      // different project of the same developer. Reuse it only when the page
+      // mentions the product name (--expect); otherwise start our own instance
+      // on a free port.
+      if (!options.expect) {
+        throw new CaptureError(
+          `Something already answers at ${url}, and I cannot tell whether it is this product. ` +
+            `Pass --expect "<product name>" so I can check, pass --url with the address of the running app (without --start), or stop whatever is on that port.`,
+        );
+      }
+      const probe = await looksLike(url, options.expect);
+      if (probe.match) {
+        options.log?.(`${url} already serves ${options.expect} ("${probe.title}"); reusing it instead of running "${options.start}".`);
+        startIt = false;
+      } else {
+        warnings.push(`Port of ${url} was taken by another app ("${probe.title || 'unknown'}"), so "${options.start}" was started on a free port instead.`);
+        options.log?.(warnings[warnings.length - 1]);
+      }
+    }
+    if (startIt) {
+      let port = null;
+      let command = options.start;
+      if (await isUp(url)) {
+        port = await freePort();
+        captureUrl = withPort(url, port);
+        if (options.portArg) {
+          // npm needs `--` before script arguments; pnpm, yarn, bun and plain commands take them directly.
+          const sep = /^npm(\s|$)/.test(command.trim()) ? ' -- ' : ' ';
+          command = `${command}${sep}${options.portArg} ${port}`;
+        }
+      }
+      options.log?.(`Starting "${command}" in ${cwd} and waiting for ${captureUrl}…`);
+      server = await startServer({ command, cwd, url: captureUrl, timeout, logFile, port });
+      if (options.expect) {
+        const probe = await looksLike(captureUrl, options.expect);
+        if (!probe.match) warnings.push(`The started app at ${captureUrl} does not mention "${options.expect}" (title: "${probe.title}"). Check the screenshots.`);
+      }
     }
   } else if (!(await isUp(url))) {
     throw new CaptureError(`Nothing answers at ${url}. Start the app first or pass --start "<command>" --cwd <dir>.`);
   }
 
   const entries = [];
-  const warnings = [];
   let browserKind = null;
   try {
     const { browser, kind } = await launchBrowser();
@@ -167,7 +241,7 @@ export async function captureScreens(options) {
         const context = await browser.newContext({ ...DEVICES[deviceName], locale: options.locale || undefined });
         const page = await context.newPage();
         for (const route of routes) {
-          const target = `${url}${route}`;
+          const target = `${captureUrl}${route}`;
           try {
             try {
               await page.goto(target, { waitUntil: 'networkidle', timeout: 30000 });
@@ -197,7 +271,7 @@ export async function captureScreens(options) {
       options.log?.('Stopped the dev server.');
     }
   }
-  const manifest = { url, capturedAt: new Date().toISOString(), browser: browserKind, screens: entries, warnings };
+  const manifest = { url: captureUrl, requestedUrl: url, capturedAt: new Date().toISOString(), browser: browserKind, screens: entries, warnings };
   await writeFile(join(out, 'manifest.json'), JSON.stringify(manifest, null, 2) + '\n', 'utf8');
   return manifest;
 }
@@ -220,7 +294,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   const args = parseArgs(process.argv.slice(2));
   if (args.help || !args.url || !args.out) {
     console.log(
-      'Usage: node capture-screens.mjs --url URL --out DIR [--routes home,pricing,es/app] [--devices desktop,mobile] [--start "npm run dev" --cwd DIR] [--timeout 120000] [--settle 1500] [--full-page] [--no-dismiss]',
+      'Usage: node capture-screens.mjs --url URL --out DIR [--routes home,pricing,es/app] [--devices desktop,mobile] [--start "npm run dev" --cwd DIR --expect "Product name" [--port-arg --port]] [--timeout 120000] [--settle 1500] [--full-page] [--no-dismiss]',
     );
     process.exit(args.help ? 0 : 1);
   }
@@ -232,6 +306,8 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     devices: split(args.devices),
     start: typeof args.start === 'string' ? args.start : undefined,
     cwd: args.cwd,
+    expect: typeof args.expect === 'string' ? args.expect : undefined,
+    portArg: typeof args['port-arg'] === 'string' ? args['port-arg'] : undefined,
     timeout: args.timeout,
     settle: args.settle,
     fullPage: Boolean(args['full-page']),

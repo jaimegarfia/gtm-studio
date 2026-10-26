@@ -86,6 +86,74 @@ setInterval(() => {}, 1000);`,
   assert.equal(free, true, 'the dev server port should be free again');
 });
 
+function serveTitle(title) {
+  return createServer((req, res) => {
+    res.setHeader('content-type', 'text/html');
+    res.end(`<!doctype html><html><head><title>${title}</title></head><body><h1>${title}</h1></body></html>`);
+  });
+}
+
+const APP_SCRIPT = `import { createServer } from 'node:http';
+const i = process.argv.indexOf('--port');
+const port = Number(i !== -1 ? process.argv[i + 1] : process.env.PORT);
+createServer((req, res) => { res.setHeader('content-type', 'text/html'); res.end('<title>CVora</title><h1>CVora</h1>'); }).listen(port, '127.0.0.1');
+setInterval(() => {}, 1000);`;
+
+test('a foreign app on the port is never captured: the product starts on a free port instead', { skip }, async () => {
+  const foreign = serveTitle('kaisub · Reserva inmersiones');
+  await new Promise((r) => foreign.listen(0, '127.0.0.1', r));
+  const { port } = foreign.address();
+  const dir = await mkdtemp(join(tmpdir(), 'gtm-cap-foreign-'));
+  await writeFile(join(dir, 'server.mjs'), APP_SCRIPT);
+  try {
+    const manifest = await captureScreens({
+      url: `http://127.0.0.1:${port}`,
+      out: join(dir, 'screens'),
+      routes: ['/'],
+      devices: ['desktop'],
+      start: 'node server.mjs',
+      cwd: dir,
+      expect: 'CVora',
+      portArg: '--port',
+      timeout: 30000,
+      settle: 0,
+    });
+    assert.equal(manifest.requestedUrl, `http://127.0.0.1:${port}`);
+    assert.notEqual(manifest.url, manifest.requestedUrl, 'captured from a different port');
+    assert.equal(manifest.screens.length, 1);
+    assert.ok(manifest.warnings.some((w) => /kaisub/.test(w) && /free port/.test(w)));
+  } finally {
+    foreign.close();
+  }
+});
+
+test('reuses the running server when it serves the expected product', { skip }, async () => {
+  const own = serveTitle('CVora — tu CV');
+  await new Promise((r) => own.listen(0, '127.0.0.1', r));
+  const { port } = own.address();
+  const out = await mkdtemp(join(tmpdir(), 'gtm-cap-reuse-'));
+  try {
+    const manifest = await captureScreens({ url: `http://127.0.0.1:${port}`, out, routes: ['/'], devices: ['desktop'], start: 'node this-must-not-run.mjs', cwd: out, expect: 'cvora', settle: 0 });
+    assert.equal(manifest.url, `http://127.0.0.1:${port}`);
+    assert.equal(manifest.screens.length, 1);
+    assert.deepEqual(manifest.warnings, []);
+  } finally {
+    own.close();
+  }
+});
+
+test('refuses to guess when the port is busy and no --expect was given', async () => {
+  const other = serveTitle('Something else');
+  await new Promise((r) => other.listen(0, '127.0.0.1', r));
+  const { port } = other.address();
+  const out = await mkdtemp(join(tmpdir(), 'gtm-cap-busy-'));
+  try {
+    await assert.rejects(captureScreens({ url: `http://127.0.0.1:${port}`, out, routes: ['/'], start: 'node x.mjs', cwd: out }), /--expect/);
+  } finally {
+    other.close();
+  }
+});
+
 test('fails clearly when nothing answers and no --start was given', async () => {
   const port = await freePort();
   const out = await mkdtemp(join(tmpdir(), 'gtm-cap-none-'));

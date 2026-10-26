@@ -64,10 +64,10 @@ Needed when any target post has format `screenshot`, or a carousel angle mention
 4. Run the capture:
 
 ```
-node "${CLAUDE_PLUGIN_ROOT}/scripts/capture-screens.mjs" --url <url> --out "${CLAUDE_PROJECT_DIR}/marketing/screens" --routes <routes> --devices desktop,mobile --start "<devCommand>" --cwd "${CLAUDE_PROJECT_DIR}/<dir>"
+node "${CLAUDE_PLUGIN_ROOT}/scripts/capture-screens.mjs" --url http://localhost:<port> --out "${CLAUDE_PROJECT_DIR}/marketing/screens" --routes <routes> --devices desktop,mobile --start "<devCommand>" --cwd "${CLAUDE_PROJECT_DIR}/<dir>" --expect "<product name from brand.md>" --port-arg <app.portArg>
 ```
 
-Omit `--start` and `--cwd` when the app is already running or when capturing the live site. If the command fails or captures nothing, say what happened in one or two lines (the dev server log is in `marketing/screens/dev-server.log`), continue without screenshots and make sure the checklists mention the missing captures.
+`--expect` matters: if the port is already taken by another project of the user, the script notices that the page does not mention the product, starts the app on a free port instead, and says so in `warnings`. Omit `--port-arg` when the scan gives `null`. Omit `--start`, `--cwd`, `--expect` and `--port-arg` when the app is already running at a URL the user gave, or when capturing the live site. If the command fails or captures nothing, say what happened in one or two lines (the dev server log is in `marketing/screens/dev-server.log`), continue without screenshots and make sure the checklists mention the missing captures. Read `manifest.json` afterwards: its `url` is where the screens really came from, and its `warnings` go into your final report.
 
 ## 4. Write the posts
 

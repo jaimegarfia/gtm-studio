@@ -25,18 +25,21 @@ const SKIP_DIRS = new Set([
 // Our own output inside the user's marketing folder.
 const SKIP_PATH_PREFIXES = ['marketing/posts/', 'marketing/screens/'];
 
+// portArg: the flag that moves the dev server to another port when the default
+// one is taken (appended as `npm run dev -- <portArg> <port>`); null means the
+// PORT environment variable is enough.
 const FRAMEWORKS = [
-  { dep: 'next', id: 'next', port: 3000, frontend: true },
-  { dep: 'nuxt', id: 'nuxt', port: 3000, frontend: true },
-  { dep: '@sveltejs/kit', id: 'sveltekit', port: 5173, frontend: true },
-  { dep: 'astro', id: 'astro', port: 4321, frontend: true },
-  { dep: '@remix-run/dev', id: 'remix', port: 5173, frontend: true },
-  { dep: 'gatsby', id: 'gatsby', port: 8000, frontend: true },
-  { dep: '@docusaurus/core', id: 'docusaurus', port: 3000, frontend: true },
-  { dep: '@angular/core', id: 'angular', port: 4200, frontend: true },
-  { dep: 'react-scripts', id: 'cra', port: 3000, frontend: true },
-  { dep: '@vue/cli-service', id: 'vue-cli', port: 8080, frontend: true },
-  { dep: 'vite', id: 'vite', port: 5173, frontend: true },
+  { dep: 'next', id: 'next', port: 3000, frontend: true, portArg: '-p' },
+  { dep: 'nuxt', id: 'nuxt', port: 3000, frontend: true, portArg: '--port' },
+  { dep: '@sveltejs/kit', id: 'sveltekit', port: 5173, frontend: true, portArg: '--port' },
+  { dep: 'astro', id: 'astro', port: 4321, frontend: true, portArg: '--port' },
+  { dep: '@remix-run/dev', id: 'remix', port: 5173, frontend: true, portArg: '--port' },
+  { dep: 'gatsby', id: 'gatsby', port: 8000, frontend: true, portArg: '-p' },
+  { dep: '@docusaurus/core', id: 'docusaurus', port: 3000, frontend: true, portArg: '--port' },
+  { dep: '@angular/core', id: 'angular', port: 4200, frontend: true, portArg: '--port' },
+  { dep: 'react-scripts', id: 'cra', port: 3000, frontend: true, portArg: null },
+  { dep: '@vue/cli-service', id: 'vue-cli', port: 8080, frontend: true, portArg: '--port' },
+  { dep: 'vite', id: 'vite', port: 5173, frontend: true, portArg: '--port' },
   { dep: '@nestjs/core', id: 'nest', port: 3000, frontend: false },
   { dep: 'fastify', id: 'fastify', port: 3000, frontend: false },
   { dep: 'express', id: 'express', port: 3000, frontend: false },
@@ -173,6 +176,7 @@ async function analyzePackages(root, files) {
       scripts: { dev: scripts.dev || null, start: scripts.start || null, build: scripts.build || null },
       devCommand,
       port,
+      portArg: fw && fw.frontend ? fw.portArg : null,
       packageManager: pm,
     });
   }
@@ -213,9 +217,25 @@ const LANDING_PATTERNS = [
   /(^|\/)(src\/|app\/)?(components|sections|modules|features)\/.*(hero|landing|feature|benefit|testimonial|faq|cta|pricing|how-?it-?works)[^/]*\.(tsx|jsx|vue|svelte|astro|ts|js|html)$/i,
 ];
 
+// Segments that mark a logged-in or auth area rather than public marketing
+// pages. Checked after the router root (`app/` or `pages/`) is stripped, so
+// Next's own `app/` directory is not mistaken for one.
+const PRIVATE_SEGMENT = /(^|\/)(app|dashboard|admin|account|settings|profile|login|signin|signup|register|auth|onboarding|\(auth\)|\(app\)|\(dashboard\)|\(protected\))(\/|$)/i;
+const CATCH_ALL = /\[\.\.\.|\[\[\.\.\./;
+
+function isPublicPage(file) {
+  if (CATCH_ALL.test(file)) return false;
+  // Lazy prefix: strip up to the FIRST router root, so `app/[locale]/app/page.tsx`
+  // keeps its inner `app` segment for the private-area check.
+  const rest = file.replace(/^(?:.*?\/)?(?:src\/)?(?:app|pages)\//, '');
+  if (rest === file) return true; // not inside a router directory
+  const dir = rest.replace(/\/[^/]*$/, '');
+  return !PRIVATE_SEGMENT.test(dir);
+}
+
 function findLanding(files, appDir) {
   const scoped = appDir ? files.filter((f) => inDir(f, appDir)) : files;
-  const hits = scoped.filter((f) => LANDING_PATTERNS.some((re) => re.test(f)) && !/\.(test|spec|stories)\./.test(f));
+  const hits = scoped.filter((f) => LANDING_PATTERNS.some((re) => re.test(f)) && !/\.(test|spec|stories)\./.test(f) && isPublicPage(f));
   return hits.sort((a, b) => a.length - b.length).slice(0, 15);
 }
 
@@ -544,12 +564,18 @@ async function findProductNames(root, files, readme, packages, app) {
   if (readme) {
     const text = await readText(root, readme);
     const h1 = text.match(/^#\s+(.+)$/m);
-    if (h1) names.push(h1[1].replace(/!\[[^\]]*\]\([^)]*\)/g, '').replace(/[*_`]/g, '').trim());
+    if (h1) {
+      const title = h1[1].replace(/!\[[^\]]*\]\([^)]*\)/g, '').replace(/[*_`]/g, '').trim();
+      if (!BOILERPLATE_TITLE.test(title)) names.push(title);
+    }
   }
   if (app?.name) names.push(app.name);
   for (const p of packages) if (p.dir === '.' && p.name) names.push(p.name);
   return [...new Set(names.filter(Boolean))].slice(0, 6);
 }
+
+// README headings left behind by scaffolding tools and templates.
+const BOILERPLATE_TITLE = /(instructions|getting started|readme|template|boilerplate|starter|welcome to|create[- ]next[- ]app|create[- ]react[- ]app|vite \+|project title|your project)/i;
 
 /* ---------- main ---------- */
 
